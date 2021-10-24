@@ -114,7 +114,7 @@ mod test {
 
     #[test_case(
         &[],
-        Err(());
+        Ok(AppOptions{source: Source::StdIn, sink: Sink::StdOut});
         "empty args"
     )]
     #[test_case(
