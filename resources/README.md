@@ -7,3 +7,6 @@ with the license terms stipulated for each font.
 
 Each subdirectory of this directory contains one font family, and a text file
 containing the license text.
+
+These font resources retain their respective licenses and are redistributed here
+under the terms of those licenses.
