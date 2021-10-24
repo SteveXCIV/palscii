@@ -1,5 +1,5 @@
-use clap::{ErrorKind, FromArgMatches, IntoApp, Parser};
-use std::{ffi::OsString, path::Path, str::FromStr};
+use clap::{FromArgMatches, IntoApp, Parser};
+use std::ffi::OsString;
 
 /// palscii - generate ASCII font palettes for rougelike engines
 ///
@@ -12,43 +12,9 @@ struct Opts {
     #[clap(short, long)]
     input: Option<String>,
 
-    /// The input format; palscii supports .otf, .ttc, and .ttf files.
-    /// If `--input` is supplied, this value will be inferred from the filename.
-    /// If `--input` is not supplied, this argument must be.
-    /// If both `--input` and this argument are supplied, this argument takes priority.
-    /// Supplying nothing, or an invalid option is an error and terminates the program.
-    #[clap(short, long, possible_values = [Format::OPEN_TYPE, Format::TRUE_TYPE])]
-    format: Option<Format>,
-
     /// Optional path to output to, if not provided, STDOUT will be used
     #[clap(short, long)]
     output: Option<String>,
-}
-
-#[derive(Debug, Eq, PartialEq, Parser)]
-pub enum Format {
-    OpenType,
-    TrueType,
-}
-
-impl FromStr for Format {
-    type Err = String;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            Format::OPEN_TYPE => Ok(Format::OpenType),
-            Format::TRUE_TYPE => Ok(Format::TrueType),
-            other => Err(format!("Unknown font type: {}", other)),
-        }
-    }
-}
-
-impl Format {
-    /// The string constant `"otf"`.
-    const OPEN_TYPE: &'static str = "otf";
-
-    /// The string constant `"ttf"`.
-    const TRUE_TYPE: &'static str = "ttf";
 }
 
 /// A font file input.
@@ -74,9 +40,8 @@ pub enum Sink {
 /// A higher-level options type that can be created from [Opts].
 #[derive(Debug, PartialEq, Eq)]
 pub struct AppOptions {
-    source: Source,
-    sink: Sink,
-    format: Format,
+    pub source: Source,
+    pub sink: Sink,
 }
 
 impl AppOptions {
@@ -88,47 +53,18 @@ impl AppOptions {
     {
         let matches = Opts::into_app().try_get_matches_from(args)?;
         let inner = Opts::from_arg_matches(&matches).expect("Failed to parse options.");
-
-        let mut format: Option<Format> = None;
         let mut source = Source::StdIn;
         let mut sink = Sink::StdOut;
 
-        if let Some(explicit_format) = inner.format {
-            format = Some(explicit_format);
-        }
-
         if let Some(path) = inner.input {
-            if format.is_none() {
-                let extension = Path::new(&path)
-                    .extension()
-                    .and_then(|os_str| os_str.to_str());
-                match extension {
-                    Some("otf") => format = Some(Format::OpenType),
-                    Some("ttf") | Some("ttc") => format = Some(Format::TrueType),
-                    _ => {}
-                }
-            }
-
             source = Source::File(path);
-        }
-
-        // if format is not explicitly set, and we can't infer it, we need to bail
-        if format.is_none() {
-            return Err(Opts::into_app().error(
-                ErrorKind::InvalidValue,
-                "Could not determine font format, supported formats are: .otf, .ttc, .ttf",
-            ));
         }
 
         if let Some(path) = inner.output {
             sink = Sink::File(path);
         }
 
-        Ok(AppOptions {
-            source,
-            sink,
-            format: format.unwrap(),
-        })
+        Ok(AppOptions { source, sink })
     }
 
     /// Attempts to parse options from `std::env::args_os()` and exits on an error.
@@ -149,30 +85,19 @@ mod test {
     use super::*;
     use test_case::test_case;
 
-    #[test]
-    fn it_parses_format() {
-        let open_type = Format::from_str(Format::OPEN_TYPE);
-        let true_type = Format::from_str(Format::TRUE_TYPE);
-        let other = Format::from_str("some other font type");
-
-        assert_eq!(open_type, Ok(Format::OpenType));
-        assert_eq!(true_type, Ok(Format::TrueType));
-        assert!(other.is_err());
-    }
-
     #[test_case(
         &[],
-        Ok(Opts{input: None, format: None, output: None});
+        Ok(Opts{input: None, output: None});
         "empty args"
     )]
     #[test_case(
         &["palscii", "-i", "/home/some_font.otf", "-o", "/home/some_font.png"],
-        Ok(Opts{input: Some("/home/some_font.otf".to_string()), format: None, output: Some("/home/some_font.png".to_string())});
+        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: Some("/home/some_font.png".to_string())});
         "short args"
     )]
     #[test_case(
         &["palscii", "--input=/home/some_font.otf"],
-        Ok(Opts{input: Some("/home/some_font.otf".to_string()), format: None, output: None});
+        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: None});
         "long args"
     )]
     fn it_parses_opts(args: &[&'static str], expected: Result<Opts, ()>) {
@@ -194,38 +119,13 @@ mod test {
     )]
     #[test_case(
         &["palscii", "-i", "/home/some_font.otf"],
-        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut, format: Format::OpenType});
-        "implied format OTF"
+        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut});
+        "short args"
     )]
     #[test_case(
-        &["palscii", "-i", "/home/some_font.ttf"],
-        Ok(AppOptions{source: Source::File("/home/some_font.ttf".to_string()), sink: Sink::StdOut, format: Format::TrueType});
-        "implied format TTF"
-    )]
-    #[test_case(
-        &["palscii", "-i", "/home/some_font.asdf"],
-        Err(());
-        "implied format unknown"
-    )]
-    #[test_case(
-        &["palscii", "-f", Format::OPEN_TYPE],
-        Ok(AppOptions{source: Source::StdIn, sink: Sink::StdOut, format: Format::OpenType});
-        "explicit format OTF"
-    )]
-    #[test_case(
-        &["palscii", "-f", Format::TRUE_TYPE],
-        Ok(AppOptions{source: Source::StdIn, sink: Sink::StdOut, format: Format::TrueType});
-        "explicit format TTF"
-    )]
-    #[test_case(
-        &["palscii", "-f", "asdf"],
-        Err(());
-        "explicit format unknown"
-    )]
-    #[test_case(
-        &["palscii", "-i", "/home/some_font.ttc", "-f", Format::OPEN_TYPE],
-        Ok(AppOptions{source: Source::File("/home/some_font.ttc".to_string()), sink: Sink::StdOut, format: Format::OpenType});
-        "explicit format overrides implied"
+        &["palscii", "--input=/home/some_font.otf"],
+        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut});
+        "long args"
     )]
     fn it_parses_app_options(args: &[&'static str], expected: Result<AppOptions, ()>) {
         let actual = AppOptions::try_parse(args.iter());
