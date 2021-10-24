@@ -1,10 +1,9 @@
-use clap::Parser;
-use opts::Opts;
+use opts::AppOptions;
 
 mod opts;
 
 fn main() {
-    let opts = Opts::parse();
+    let app_options = AppOptions::parse();
 
-    println!("{:?}", opts);
+    println!("{:?}", app_options);
 }
