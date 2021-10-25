@@ -1,5 +1,7 @@
 use opts::AppOptions;
 
+
+mod font;
 mod opts;
 
 fn main() {
