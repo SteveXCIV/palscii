@@ -1,5 +1,5 @@
-use fontdue::Font;
-use std::{ffi::OsStr, io::Read};
+use fontdue::{Font, FontSettings};
+use std::{ffi::OsStr, fs::File, io::Read, path::Path};
 
 #[derive(Debug)]
 pub struct Rasterizer {
@@ -9,18 +9,32 @@ pub struct Rasterizer {
 impl Rasterizer {
     /// Load a [Rasterizer] from a file path.
     pub fn load_from_file<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<Rasterizer, String> {
-        todo!()
+        let mut file = File::open(Path::new(s)).map_err(|e| e.to_string())?;
+        Self::load_from(&mut file)
     }
 
     /// Load a [Rasterizer] from any [Read] implementation.
     pub fn load_from<R: Read>(reader: &mut R) -> Result<Rasterizer, String> {
-        todo!()
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf).map_err(|e| e.to_string())?;
+        let font = Font::from_bytes(buf, FontSettings::default()).map_err(|e| e.to_string())?;
+        Ok(Rasterizer { font })
     }
 
-    /// Given dimensions and a glyph, get the px size needed to make Fontdue
-    /// rasterize within those bounds.
+    /// Given dimensions and a glyph, get the max px size needed to rasterize
+    /// within those bounds.
     fn get_scaled_px(&self, width: u32, height: u32, glyph: char) -> f32 {
-        todo!()
+        let metric = self.font.metrics(glyph, width as f32);
+        // these will never render anything, so the size is not relevant
+        if metric.width == 0 || metric.height == 0 {
+            return 1.0;
+        }
+        // TODO: is this actually right?
+        if metric.width > metric.height {
+            width as f32 / metric.width as f32
+        } else {
+            height as f32 / metric.height as f32
+        }
     }
 }
 
