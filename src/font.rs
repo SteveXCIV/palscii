@@ -30,11 +30,31 @@ impl Rasterizer {
             return 1.0;
         }
         // TODO: is this actually right?
+        let px;
         if metric.width > metric.height {
-            width as f32 / metric.width as f32
+            px = width as f32 / metric.width as f32;
         } else {
-            height as f32 / metric.height as f32
+            px = height as f32 / metric.height as f32
         }
+
+        #[cfg(debug_assertions)]
+        {
+            let metric = self.font.metrics(glyph, px);
+            debug_assert!(
+                metric.width <= width as usize,
+                "Width failed debug check: expected={}, actual={}",
+                width,
+                metric.width
+            );
+            debug_assert!(
+                metric.height <= height as usize,
+                "Height failed debug check: expected={}, actual={}",
+                height,
+                metric.height
+            );
+        }
+
+        px
     }
 }
 
