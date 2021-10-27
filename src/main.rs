@@ -37,6 +37,7 @@ fn main() -> Result<(), AppError> {
         _ => todo!(),
     };
     let rasterizer = Rasterizer::load_from_file(&path)?;
+    // TODO: configurable dimensions
     let mut palette = Palette::new(ROWS, COLS, 16, 16);
     rasterizer.render_to(&GLYPHS, &mut palette);
     let writer = ImageWriter::from_palette(palette);
