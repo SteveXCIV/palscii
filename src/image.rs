@@ -1,5 +1,5 @@
 use super::palette::Palette;
-use image::RgbaImage;
+use image::{ImageBuffer, Rgba, RgbaImage};
 use std::io::Write;
 
 #[derive(Debug)]
@@ -7,9 +7,35 @@ pub struct ImageWriter {
     buffer: RgbaImage,
 }
 
+const FOREGROUND: Rgba<u8> = Rgba([255, 255, 255, 255]);
+const BACKGROUND: Rgba<u8> = Rgba([0, 0, 0, 0]);
+
 impl ImageWriter {
     pub fn from_palette(palette: Palette) -> Self {
-        todo!()
+        let (rows, cols) = palette.get_dimensions();
+        let (width, height) = palette.get_cell_dimensions();
+        let (buf_width, buf_height) = (cols * width, rows * height);
+        let mut buffer: RgbaImage = ImageBuffer::new(buf_width, buf_height);
+        // time to build some pyramids!
+        for row in 0..rows {
+            for col in 0..cols {
+                let cell = palette.get(row, col);
+                for x in 0..width {
+                    for y in 0..height {
+                        let set = cell[(y * width + x) as usize];
+                        let global_x = x + col * width;
+                        let global_y = y + row * height;
+                        if set {
+                            buffer.put_pixel(global_x, global_y, FOREGROUND);
+                        } else {
+                            buffer.put_pixel(global_x, global_y, BACKGROUND);
+                        }
+                    }
+                }
+            }
+        }
+
+        ImageWriter { buffer }
     }
 
     pub fn write_to<W: Write>(writer: W) {
@@ -19,8 +45,6 @@ impl ImageWriter {
 
 #[cfg(test)]
 mod test {
-    use image::Rgba;
-
     use super::*;
 
     #[test]
@@ -30,18 +54,14 @@ mod test {
         palette.set(0, 0, 2, 2, true);
         let expected = &[
             //
-            false, false, false, //
-            false, true, false, //
-            false, false, true, //
-            false, false, false,
+            BACKGROUND, BACKGROUND, BACKGROUND, //
+            BACKGROUND, FOREGROUND, BACKGROUND, //
+            BACKGROUND, BACKGROUND, FOREGROUND, //
+            BACKGROUND, BACKGROUND, BACKGROUND,
         ];
         let writer = ImageWriter::from_palette(palette);
 
-        let actual: Vec<bool> = writer
-            .buffer
-            .pixels()
-            .map(|pixel| *pixel == Rgba([255, 255, 255, 255]))
-            .collect();
+        let actual: Vec<Rgba<u8>> = writer.buffer.pixels().map(|p| *p).collect();
 
         assert_eq!(actual, expected);
     }
