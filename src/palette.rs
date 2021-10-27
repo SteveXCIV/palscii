@@ -4,7 +4,7 @@ pub struct Palette {
     cols: u32,
     cell_width: u32,
     cell_height: u32,
-    bits: Vec<bool>,
+    bits: Vec<Vec<bool>>,
 }
 
 impl Palette {
@@ -17,7 +17,13 @@ impl Palette {
     /// * `cell_width`: the width of each individual cell
     /// * `cell_height`: the height of each individual cell
     pub fn new(rows: u32, cols: u32, cell_width: u32, cell_height: u32) -> Self {
-        todo!()
+        Palette {
+            rows,
+            cols,
+            cell_width,
+            cell_height,
+            bits: vec![vec![false; (cell_width * cell_height) as usize]; (rows * cols) as usize],
+        }
     }
 
     /// Gets the dimensions the cells of this [Palette].
@@ -31,7 +37,7 @@ impl Palette {
     /// assert_eq!(height, 4u32);
     /// ```
     pub fn get_cell_dimensions(&self) -> (u32, u32) {
-        todo!()
+        (self.cell_width, self.cell_height)
     }
 
     /// Gets the number of rows and columns of this [Palette].
@@ -45,47 +51,29 @@ impl Palette {
     /// assert_eq!(cols, 4u32);
     /// ```
     pub fn get_dimensions(&self) -> (u32, u32) {
-        todo!()
+        (self.rows, self.cols)
     }
 
     /// Sets the bit value of the `(x, y)` bit of cell `(row, col)`
-    ///
-    /// See the [Palette::get] tests for examples.
     pub fn set(&mut self, row: u32, col: u32, x: u32, y: u32, value: bool) {
-        todo!()
+        assert!(row < self.rows, "row out of bounds: {}", row);
+        assert!(col < self.cols, "column out of bounds: {}", col);
+        assert!(x < self.cell_width, "x out of bounds: {}", x);
+        assert!(y < self.cell_height, "y out of bounds: {}", y);
+        self.bits[(row * self.cols + col) as usize][(y * self.cell_width + x) as usize] = value;
     }
 
-    /// Gets the bit value at absolute coordinates `(x, y)`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// // a 3x3 palette of 3x3 cells, for a total of 9x9 absolute coords
-    /// let mut palette = Palette::new(3u32, 3u32, 3u32, 3u32);
-    /// // set the (1, 1) cell's (1, 1) bit to `true`
-    /// palette.set(1, 1, 1, 1, true);
-    /// assert!(palette.get(4, 4));
-    /// ```
-    pub fn get(&self, x: u32, y: u32) -> bool {
-        todo!()
+    /// Gets the bit values at `(row, col)`.
+    pub fn get(&self, row: u32, col: u32) -> &[bool] {
+        assert!(row < self.rows, "row out of bounds: {}", row);
+        assert!(col < self.cols, "column out of bounds: {}", col);
+        &self.bits[(row * self.cols + col) as usize]
     }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-
-    #[test]
-    fn it_creates_correct_sized_inner_vector() {
-        let palette = Palette::new(3, 4, 4, 3);
-
-        assert_eq!(
-            palette.bits.len(),
-            144,
-            "Expected 12x12, got: {}",
-            palette.bits.len()
-        );
-    }
 
     #[test]
     fn it_gets_cell_dimensions() {
@@ -110,10 +98,17 @@ mod test {
     #[test]
     fn it_sets_and_gets_bits() {
         let mut palette = Palette::new(3, 4, 3, 4);
+        let expected = &[
+            //
+            false, false, false, //
+            false, true, false, //
+            false, false, false, //
+            false, false, false,
+        ];
 
         palette.set(1, 1, 1, 1, true);
-        let is_set = palette.get(4, 5);
+        let actual = palette.get(1, 1);
 
-        assert!(is_set, "Expected cell (4, 5) to be set: {:?}", palette);
+        assert_eq!(actual, expected);
     }
 }
