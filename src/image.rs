@@ -1,5 +1,7 @@
+use super::error::AppError;
 use super::palette::Palette;
-use image::{ImageBuffer, Rgba, RgbaImage};
+use image::png::{CompressionType, FilterType, PngEncoder};
+use image::{ColorType, ImageBuffer, ImageEncoder, Rgba, RgbaImage};
 use std::io::Write;
 
 #[derive(Debug)]
@@ -38,8 +40,15 @@ impl ImageWriter {
         ImageWriter { buffer }
     }
 
-    pub fn write_to<W: Write>(writer: W) {
-        todo!()
+    pub fn write_to<W: Write>(&self, writer: W) -> Result<(), AppError> {
+        let enc = PngEncoder::new_with_quality(writer, CompressionType::Fast, FilterType::NoFilter);
+        enc.write_image(
+            &self.buffer,
+            self.buffer.width(),
+            self.buffer.height(),
+            ColorType::Rgba8,
+        )
+        .map_err(|e| AppError::IOError(e.to_string()))
     }
 }
 

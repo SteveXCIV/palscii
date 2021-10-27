@@ -27,7 +27,7 @@ impl Rasterizer {
         Ok(Rasterizer { font })
     }
 
-    pub fn render_to(&self, glyphs: Vec<char>, palette: &mut Palette) {
+    pub fn render_to(&self, glyphs: &[char], palette: &mut Palette) {
         let (rows, cols) = palette.get_dimensions();
         let (width, height) = palette.get_cell_dimensions();
 
@@ -68,9 +68,9 @@ impl Rasterizer {
         // TODO: is this actually right?
         let px;
         if metric.width > metric.height {
-            px = width as f32 / metric.width as f32;
+            px = (width as f32 / metric.width as f32) * width as f32;
         } else {
-            px = height as f32 / metric.height as f32
+            px = (height as f32 / metric.height as f32) * height as f32;
         }
 
         #[cfg(debug_assertions)]
