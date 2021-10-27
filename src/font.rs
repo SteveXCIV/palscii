@@ -1,3 +1,4 @@
+use super::error::AppError;
 use fontdue::{Font, FontSettings};
 use std::{ffi::OsStr, fs::File, io::Read, path::Path};
 
@@ -8,16 +9,19 @@ pub struct Rasterizer {
 
 impl Rasterizer {
     /// Load a [Rasterizer] from a file path.
-    pub fn load_from_file<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<Rasterizer, String> {
-        let mut file = File::open(Path::new(s)).map_err(|e| e.to_string())?;
+    pub fn load_from_file<S: AsRef<OsStr> + ?Sized>(s: &S) -> Result<Rasterizer, AppError> {
+        let mut file = File::open(Path::new(s)).map_err(|e| AppError::IOError(e.to_string()))?;
         Self::load_from(&mut file)
     }
 
     /// Load a [Rasterizer] from any [Read] implementation.
-    pub fn load_from<R: Read>(reader: &mut R) -> Result<Rasterizer, String> {
+    pub fn load_from<R: Read>(reader: &mut R) -> Result<Rasterizer, AppError> {
         let mut buf = Vec::new();
-        reader.read_to_end(&mut buf).map_err(|e| e.to_string())?;
-        let font = Font::from_bytes(buf, FontSettings::default()).map_err(|e| e.to_string())?;
+        reader
+            .read_to_end(&mut buf)
+            .map_err(|e| AppError::IOError(e.to_string()))?;
+        let font = Font::from_bytes(buf, FontSettings::default())
+            .map_err(|e| AppError::FormatError(e.to_string()))?;
         Ok(Rasterizer { font })
     }
 

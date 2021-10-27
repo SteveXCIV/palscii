@@ -1,7 +1,9 @@
 use opts::AppOptions;
 
 
+mod error;
 mod font;
+mod image;
 mod opts;
 mod palette;
 
