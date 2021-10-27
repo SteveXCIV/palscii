@@ -1,3 +1,5 @@
+use crate::palette::Palette;
+
 use super::error::AppError;
 use fontdue::{Font, FontSettings};
 use std::{ffi::OsStr, fs::File, io::Read, path::Path};
@@ -23,6 +25,36 @@ impl Rasterizer {
         let font = Font::from_bytes(buf, FontSettings::default())
             .map_err(|e| AppError::FormatError(e.to_string()))?;
         Ok(Rasterizer { font })
+    }
+
+    pub fn render_to(&self, glyphs: Vec<char>, palette: &mut Palette) {
+        let (rows, cols) = palette.get_dimensions();
+        let (width, height) = palette.get_cell_dimensions();
+
+        assert_eq!(
+            rows * cols,
+            glyphs.len() as u32,
+            "dimension mismatch - cannot render {} glyph(s) to {}x{} palette",
+            glyphs.len(),
+            rows,
+            cols
+        );
+
+        for (index, &glyph) in glyphs.iter().enumerate() {
+            let index = index as u32;
+            let px = self.get_scaled_px(width, height, glyph);
+            let (metrics, buffer) = self.font.rasterize(glyph, px);
+            let (glyph_width, glyph_height) = (metrics.width as u32, metrics.height as u32);
+            let (offset_x, offset_y) = ((width - glyph_width) / 2, (height - glyph_height) / 2);
+            let row = index / cols;
+            let col = index % cols;
+            for x in 0..glyph_width {
+                for y in 0..glyph_height {
+                    let is_filled = buffer[(y * glyph_width + x) as usize] > 0;
+                    palette.set(row, col, x + offset_x, y + offset_y, is_filled);
+                }
+            }
+        }
     }
 
     /// Given dimensions and a glyph, get the max px size needed to rasterize
