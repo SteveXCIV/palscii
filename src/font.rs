@@ -44,7 +44,10 @@ impl Rasterizer {
             let index = index as u32;
             let px = self.get_scaled_px(width, height, glyph);
             let (metrics, buffer) = self.font.rasterize(glyph, px);
-            let (glyph_width, glyph_height) = (metrics.width as u32, metrics.height as u32);
+            let (glyph_width, glyph_height) = (
+                u32::min(metrics.width as u32, width),
+                u32::min(metrics.height as u32, height),
+            );
             let (offset_x, offset_y) = ((width - glyph_width) / 2, (height - glyph_height) / 2);
             let row = index / cols;
             let col = index % cols;

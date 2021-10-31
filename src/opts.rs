@@ -5,6 +5,16 @@ use std::ffi::OsString;
 ///
 /// palscii is designed to be a dead-simple UNIX-like tool.
 /// It takes font files and makes PNG palettes, and it aims to do that well.
+///
+/// ### NOTES
+///
+/// The glyph parameters `width` and `height` are scaled to on a best-case
+/// scenario.
+/// In situations where it is not possible to do so, cropping will occur and may
+/// result in undesirable visual artifacts.
+///
+/// In DEBUG builds of palscii, an assertion checks the validity of the scale
+/// operation, so palscii will exit with an error.
 #[derive(Debug, Eq, PartialEq, Parser)]
 #[clap()]
 struct Opts {
@@ -15,6 +25,14 @@ struct Opts {
     /// Optional path to output to, if not provided, STDOUT will be used
     #[clap(short, long)]
     output: Option<String>,
+
+    /// Optional maximum glyph width, default: 8. See **Notes** for more details.
+    #[clap(short, long, default_value = "8")]
+    width: u32,
+
+    /// Optional maximum glyph height, defualt: 16. See **Notes** for more details.
+    #[clap(short, long, default_value = "16")]
+    height: u32,
 }
 
 /// A font file input.
@@ -87,17 +105,17 @@ mod test {
 
     #[test_case(
         &[],
-        Ok(Opts{input: None, output: None});
+        Ok(Opts{input: None, output: None, width: 8, height: 16});
         "empty args"
     )]
     #[test_case(
-        &["palscii", "-i", "/home/some_font.otf", "-o", "/home/some_font.png"],
-        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: Some("/home/some_font.png".to_string())});
+        &["palscii", "-i", "/home/some_font.otf", "-o", "/home/some_font.png", "-w", "64", "-h", "128"],
+        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: Some("/home/some_font.png".to_string()), width: 64, height: 128});
         "short args"
     )]
     #[test_case(
-        &["palscii", "--input=/home/some_font.otf"],
-        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: None});
+        &["palscii", "--input=/home/some_font.otf", "--width", "64"],
+        Ok(Opts{input: Some("/home/some_font.otf".to_string()), output: None, width: 64, height: 16});
         "long args"
     )]
     fn it_parses_opts(args: &[&'static str], expected: Result<Opts, ()>) {
