@@ -1,9 +1,9 @@
 use crate::image::ImageWriter;
 use error::AppError;
 use font::Rasterizer;
-use opts::{AppOptions, Source};
+use opts::{AppOptions, Sink, Source};
 use palette::Palette;
-use std::fs::File;
+use std::{fs::File, io};
 
 mod error;
 mod font;
@@ -32,16 +32,25 @@ const COLS: u32 = 16;
 
 fn main() -> Result<(), AppError> {
     let app_options = AppOptions::parse();
-    let path = match app_options.source {
-        Source::File(p) => p,
-        _ => todo!(),
+
+    let rasterizer = match app_options.source {
+        Source::File(input_path) => Rasterizer::load_from_file(&input_path)?,
+        Source::StdIn => Rasterizer::load_from(&mut io::stdin())?,
     };
-    let rasterizer = Rasterizer::load_from_file(&path)?;
-    // TODO: configurable dimensions
-    let mut palette = Palette::new(ROWS, COLS, 16, 16);
+
+    let mut palette = Palette::new(ROWS, COLS, app_options.width, app_options.height);
     rasterizer.render_to(&GLYPHS, &mut palette);
+
     let writer = ImageWriter::from_palette(palette);
-    let output = File::create("target/test.png").map_err(|e| AppError::IOError(e.to_string()))?;
-    writer.write_to(output)?;
+    match app_options.sink {
+        Sink::File(output_path) => {
+            let output = File::create(output_path).map_err(|e| AppError::IOError(e.to_string()))?;
+            writer.write_to(output)?;
+        }
+        Sink::StdOut => {
+            writer.write_to(io::stdout())?;
+        }
+    };
+
     Ok(())
 }

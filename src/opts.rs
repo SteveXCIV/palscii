@@ -60,6 +60,8 @@ pub enum Sink {
 pub struct AppOptions {
     pub source: Source,
     pub sink: Sink,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl AppOptions {
@@ -82,7 +84,12 @@ impl AppOptions {
             sink = Sink::File(path);
         }
 
-        Ok(AppOptions { source, sink })
+        Ok(AppOptions {
+            source,
+            sink,
+            width: inner.width,
+            height: inner.height,
+        })
     }
 
     /// Attempts to parse options from `std::env::args_os()` and exits on an error.
@@ -132,17 +139,17 @@ mod test {
 
     #[test_case(
         &[],
-        Ok(AppOptions{source: Source::StdIn, sink: Sink::StdOut});
+        Ok(AppOptions{source: Source::StdIn, sink: Sink::StdOut, width: 8, height: 16});
         "empty args"
     )]
     #[test_case(
         &["palscii", "-i", "/home/some_font.otf"],
-        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut});
+        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut, width: 8, height: 16});
         "short args"
     )]
     #[test_case(
         &["palscii", "--input=/home/some_font.otf"],
-        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut});
+        Ok(AppOptions{source: Source::File("/home/some_font.otf".to_string()), sink: Sink::StdOut, width: 8, height: 16});
         "long args"
     )]
     fn it_parses_app_options(args: &[&'static str], expected: Result<AppOptions, ()>) {
